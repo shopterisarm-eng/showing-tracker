@@ -1,9 +1,3 @@
-const Anthropic = require("@anthropic-ai/sdk");
-
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 module.exports = async (req, res) => {
   // CORS headers
   res.setHeader("Access-Control-Allow-Credentials", "true");
@@ -33,20 +27,27 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: "Transcript is required" });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
       return res
         .status(500)
         .json({ error: "ANTHROPIC_API_KEY not configured" });
     }
 
-    // Call Claude to extract and categorize attributes
-    const message = await client.messages.create({
-      model: "claude-opus-4-1",
-      max_tokens: 500,
-      messages: [
-        {
-          role: "user",
-          content: `Extract home features and conditions from this voice memo. Categorize them into: Positive Features, Concerns, Size/Layout, Condition, and Client Reaction.
+    // Call Claude API directly via fetch
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        model: "claude-opus-4-1",
+        max_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: `Extract home features and conditions from this voice memo. Categorize them into: Positive Features, Concerns, Size/Layout, Condition, and Client Reaction.
 
 Voice memo: "${transcript}"
 
@@ -60,24 +61,32 @@ Return ONLY a JSON object like this (no markdown, no extra text):
 }
 
 If a category has no items, use an empty array. Be concise - 2-4 words per feature.`,
-        },
-      ],
+          },
+        ],
+      }),
     });
 
-    const content = message.content[0];
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("API Error:", error);
+      return res.status(response.status).json({
+        error: `Anthropic API error: ${response.status}`,
+      });
+    }
+
+    const data = await response.json();
+    const content = data.content[0];
+
     if (content.type !== "text") {
-      throw new Error("Unexpected response type");
+      return res.status(500).json({ error: "Unexpected response type" });
     }
 
     const attributes = JSON.parse(content.text.trim());
-
     res.status(200).json({ attributes });
   } catch (error) {
     console.error("Error:", error);
-    res
-      .status(500)
-      .json({
-        error: error.message || "Failed to process transcription",
-      });
+    res.status(500).json({
+      error: error.message || "Failed to process transcription",
+    });
   }
 };
