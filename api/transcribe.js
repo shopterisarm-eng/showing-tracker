@@ -1,15 +1,7 @@
 module.exports = async (req, res) => {
-  // CORS headers
-  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,OPTIONS,PATCH,DELETE,POST,PUT"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
-  );
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") {
     res.status(200).end();
@@ -24,69 +16,43 @@ module.exports = async (req, res) => {
     const { transcript } = req.body;
 
     if (!transcript) {
-      return res.status(400).json({ error: "Transcript is required" });
+      return res.status(400).json({ error: "No transcript" });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return res
-        .status(500)
-        .json({ error: "ANTHROPIC_API_KEY not configured" });
+    const key = process.env.ANTHROPIC_API_KEY;
+    if (!key) {
+      return res.status(500).json({ error: "No API key" });
     }
 
-    // Call Claude API directly via fetch
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
+        "x-api-key": key,
       },
       body: JSON.stringify({
-        model: "claude-opus-4-1",
-        max_tokens: 500,
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: 300,
         messages: [
           {
             role: "user",
-            content: `Extract home features and conditions from this voice memo. Categorize them into: Positive Features, Concerns, Size/Layout, Condition, and Client Reaction.
-
-Voice memo: "${transcript}"
-
-Return ONLY a JSON object like this (no markdown, no extra text):
-{
-  "positive": ["large deck", "updated kitchen"],
-  "concerns": ["needs roof work"],
-  "size": ["3 bedrooms", "2 bathrooms"],
-  "condition": ["hardwood floors", "fresh paint"],
-  "clientReaction": ["loved the kitchen", "interested in pool"]
-}
-
-If a category has no items, use an empty array. Be concise - 2-4 words per feature.`,
+            content: `Extract features from: "${transcript}"\n\nReturn JSON:\n{"positive":[],"concerns":[],"size":[],"condition":[],"clientReaction":[]}`,
           },
         ],
       }),
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error("API Error:", error);
-      return res.status(response.status).json({
-        error: `Anthropic API error: ${response.status}`,
-      });
-    }
-
     const data = await response.json();
-    const content = data.content[0];
-
-    if (content.type !== "text") {
-      return res.status(500).json({ error: "Unexpected response type" });
+    
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error });
     }
 
-    const attributes = JSON.parse(content.text.trim());
+    const text = data.content[0].text;
+    const attributes = JSON.parse(text);
+    
     res.status(200).json({ attributes });
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({
-      error: error.message || "Failed to process transcription",
-    });
+    res.status(500).json({ error: error.toString() });
   }
 };
