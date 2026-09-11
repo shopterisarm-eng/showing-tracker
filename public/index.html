@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#185FA5">
+  <meta name="description" content="Real estate showing tracker with AI-powered voice memos">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23185FA5' width='100' height='100'/><text x='50' y='55' font-size='50' font-weight='bold' fill='white' text-anchor='middle'>ST</text></svg>">
+  <title>Showing Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f9f8f7;
+      color: #2c2c2a;
+    }
+    
+    .app { display: flex; flex-direction: column; height: 100vh; }
+    .header { background: #185FA5; color: white; padding: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 20px; margin-bottom: 0.25rem; }
+    .header p { font-size: 13px; opacity: 0.9; }
+    
+    .content { flex: 1; overflow-y: auto; padding: 1rem; }
+    .container { max-width: 600px; margin: 0 auto; }
+    
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; border-bottom: 1px solid #e0dfd6; }
+    .nav-tabs button { 
+      background: none; border: none; padding: 12px 16px; font-size: 14px; font-weight: 500;
+      color: #888780; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
+      transition: color 0.2s;
+    }
+    .nav-tabs button.active { color: #185FA5; border-bottom-color: #185FA5; }
+    
+    .section { display: none; }
+    .section.active { display: block; }
+    
+    .add-home { background: white; border: 0.5px solid #e0dfd6; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; }
+    .form-row { margin-bottom: 12px; }
+    .form-row label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+    input, textarea { 
+      width: 100%; font-family: inherit; font-size: 14px; padding: 10px 12px;
+      border: 0.5px solid #e0dfd6; border-radius: 8px; background: white;
+    }
+    input:focus, textarea:focus { outline: none; border-color: #185FA5; box-shadow: 0 0 0 2px rgba(24, 95, 165, 0.1); }
+    textarea { resize: vertical; min-height: 60px; }
+    
+    .button-group { display: flex; gap: 8px; }
+    button { 
+      font-family: inherit; font-size: 14px; padding: 10px 16px;
+      border: 0.5px solid #b4b2a9; border-radius: 8px; background: white;
+      color: #2c2c2a; cursor: pointer; transition: background 0.15s;
+    }
+    button:hover { background: #f1ede5; }
+    button:active { transform: scale(0.98); }
+    button.primary { background: #185FA5; color: white; border-color: #185FA5; }
+    button.primary:hover { background: #0C447C; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .homes-list { display: flex; flex-direction: column; gap: 12px; }
+    .home-card { background: white; border: 0.5px solid #e0dfd6; border-radius: 12px; padding: 1rem; }
+    
+    .home-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .home-title { flex: 1; }
+    .home-title h2 { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+    .home-meta { font-size: 13px; color: #888780; }
+    
+    .rating-picker { display: flex; gap: 4px; margin-bottom: 12px; }
+    .star { font-size: 24px; cursor: pointer; opacity: 0.3; transition: opacity 0.2s; }
+    .star.filled { opacity: 1; color: #FFB81C; }
+    
+    .delete-btn { background: none; border: none; color: #888780; cursor: pointer; padding: 0; font-size: 16px; }
+    .delete-btn:hover { color: #e24b4a; }
+    
+    .memos-section { margin-top: 12px; border-top: 0.5px solid #e0dfd6; padding-top: 12px; }
+    .memos-section h3 { font-size: 13px; font-weight: 500; color: #888780; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .memo-item { background: #f1ede5; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+    .memo-item:last-child { margin-bottom: 0; }
+    .memo-time { font-size: 12px; color: #888780; margin-bottom: 8px; }
+    .memo-text { font-size: 13px; margin-bottom: 10px; line-height: 1.5; font-style: italic; }
+    
+    .attributes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .attribute-tag { padding: 4px 10px; border-radius: 16px; font-size: 12px; font-weight: 500; }
+    .tag-positive { background: #E8F5E9; color: #2E7D32; }
+    .tag-concerns { background: #FCEBEB; color: #A32D2D; }
+    .tag-size { background: #F3E5F5; color: #6A1B9A; }
+    .tag-condition { background: #FFF3E0; color: #E65100; }
+    .tag-reaction { background: #E0F2F1; color: #00695C; }
+    
+    .memo-delete { background: none; border: none; color: #888780; cursor: pointer; font-size: 12px; padding: 0; }
+    .memo-delete:hover { color: #e24b4a; }
+    
+    .record-btn { 
+      background: #e24b4a; color: white; border-color: #e24b4a; font-weight: 500;
+      display: flex; align-items: center; gap: 8px; width: 100%;
+    }
+    .record-btn:hover { background: #a32d2d; border-color: #a32d2d; }
+    .record-btn.recording { background: #a32d2d; animation: pulse 1s infinite; }
+    
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    
+    .record-section { margin-top: 12px; padding-top: 12px; border-top: 0.5px solid #e0dfd6; }
+    .record-section label { display: block; font-size: 13px; font-weight: 500; color: #888780; margin-bottom: 8px; }
+    .status { font-size: 12px; color: #888780; margin-top: 8px; }
+    .status.processing { color: #185FA5; }
+    .status.error { color: #e24b4a; }
+    
+    .empty-state { text-align: center; padding: 2rem 1rem; color: #888780; }
+    .empty-state p { font-size: 14px; }
+    
+    .send-summary-section { background: white; border: 0.5px solid #e0dfd6; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; }
+    .summary-form { display: flex; flex-direction: column; gap: 12px; }
+    
+    .loading { display: inline-block; width: 12px; height: 12px; border: 2px solid #185FA5; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    .summary-preview { background: #f9f8f7; border: 1px solid #e0dfd6; border-radius: 8px; padding: 1rem; margin-top: 12px; max-height: 300px; overflow-y: auto; font-size: 12px; line-height: 1.6; color: #555; }
+    
+    @media (max-height: 600px) {
+      .content { padding: 0.5rem; }
+      .add-home, .send-summary-section { padding: 0.75rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Showing Tracker</h1>
+    <p>Voice memos with AI categorization</p>
+  </div>
+  
+  <div class="content">
+    <div class="container">
+      <div class="nav-tabs">
+        <button class="active" onclick="switchTab('showings')">Showings</button>
+        <button onclick="switchTab('summary')">Summary</button>
+      </div>
+      
+      <!-- Showings Tab -->
+      <div id="showings" class="section active">
+        <div class="add-home">
+          <div class="form-row">
+            <label>Property address *</label>
+            <input type="text" id="address" placeholder="123 Main St, Glendale AZ">
+          </div>
+          <div class="form-row">
+            <label>Client name</label>
+            <input type="text" id="client" placeholder="Sarah & Tom Smith">
+          </div>
+          <div class="form-row">
+            <label>Quick notes</label>
+            <textarea id="notes" placeholder="Pool, updated kitchen, 3 bed..."></textarea>
+          </div>
+          <div class="button-group">
+            <button class="primary" onclick="addHome()">Add showing</button>
+          </div>
+        </div>
+        
+        <div id="homesList" class="homes-list"></div>
+      </div>
+      
+      <!-- Summary Tab -->
+      <div id="summary" class="section">
+        <div class="send-summary-section">
+          <h2 style="margin-bottom: 12px;">Send Summary to Client</h2>
+          <div class="summary-form">
+            <div class="form-row">
+              <label>Client email *</label>
+              <input type="email" id="summaryEmail" placeholder="client@example.com">
+            </div>
+            <div class="form-row">
+              <label>Client name (optional)</label>
+              <input type="text" id="summaryClientName" placeholder="Sarah & Tom">
+            </div>
+            <button class="primary" onclick="generateSummary()" id="generateBtn">Generate summary</button>
+            <div id="summaryMessage" style="display: none; margin-top: 12px; padding: 12px; border-radius: 8px; font-size: 13px;">
+              <div id="summaryMessageText"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div id="summaryPreviewContainer" style="display: none;">
+          <h3 style="margin-bottom: 12px; font-weight: 500;">Preview</h3>
+          <div class="summary-preview" id="summaryPreview"></div>
+          <button class="primary" style="margin-top: 12px; width: 100%;" onclick="downloadSummary()">Download Summary</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

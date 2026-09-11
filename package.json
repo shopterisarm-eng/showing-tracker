@@ -1,0 +1,18 @@
+{
+  "name": "showing-tracker",
+  "version": "1.0.0",
+  "description": "Real estate showing tracker with voice memos and AI categorization",
+  "main": "api/index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "@anthropic-ai/sdk": "^0.9.0",
+    "nodemailer": "^6.9.3"
+  },
+  "devDependencies": {
+    "vercel": "^31.0.0"
+  }
+}
